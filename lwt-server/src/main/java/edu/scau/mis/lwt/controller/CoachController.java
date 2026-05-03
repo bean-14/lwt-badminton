@@ -1,7 +1,7 @@
 package edu.scau.mis.lwt.controller;
 
 import edu.scau.mis.lwt.common.base.BaseController;
-import edu.scau.mis.lwt.common.result.R;
+import edu.scau.mis.lwt.common.result.Result;
 import edu.scau.mis.lwt.pojo.dto.ScheduleDTO;
 import edu.scau.mis.lwt.pojo.vo.BookingVO;
 import edu.scau.mis.lwt.pojo.vo.ScheduleVO;
@@ -14,6 +14,11 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * 教练控制器
+ * 处理教练相关的所有操作：设置可用时间、查看预约、确认课程等
+ * 所有接口都需要JWT认证，且只能操作教练自己的数据
+ */
 @RestController
 @RequestMapping("/coach")
 public class CoachController extends BaseController {
@@ -24,35 +29,63 @@ public class CoachController extends BaseController {
     @Autowired
     private BookingService bookingService;
 
+    /**
+     * 添加可用时间段（教练设置自己可预约的时间）
+     * @param scheduleDTO 排课信息（日期、开始时间、结束时间、场地等）
+     * @return 成功响应
+     */
     @PostMapping("/schedule")
-    public R<Void> addSchedule(@RequestBody ScheduleDTO scheduleDTO) {
+    public Result<Void> addSchedule(@RequestBody ScheduleDTO scheduleDTO) {
         coachScheduleService.addSchedule(scheduleDTO);
-        return R.ok();
+        return Result.ok();
     }
 
+    /**
+     * 查看我的排课安排
+     * @param coachId 教练ID（从JWT解析）
+     * @param date 可选，按日期筛选
+     * @return 排课安排列表
+     */
     @GetMapping("/schedules")
-    public R<List<ScheduleVO>> getMySchedules(
+    public Result<List<ScheduleVO>> getMySchedules(
             @RequestAttribute("userId") Long coachId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return R.ok(coachScheduleService.getCoachSchedules(coachId, date));
+        return Result.ok(coachScheduleService.getCoachSchedules(coachId, date));
     }
 
+    /**
+     * 删除排课时间段
+     * @param scheduleId 排课ID
+     * @return 成功响应
+     */
     @DeleteMapping("/schedule/{scheduleId}")
-    public R<Void> deleteSchedule(@PathVariable Long scheduleId) {
+    public Result<Void> deleteSchedule(@PathVariable Long scheduleId) {
         coachScheduleService.deleteSchedule(scheduleId);
-        return R.ok();
+        return Result.ok();
     }
 
+    /**
+     * 查看我的课程预约
+     * @param coachId 教练ID（从JWT解析）
+     * @param date 可选，按日期筛选
+     * @return 预约记录列表
+     */
     @GetMapping("/bookings")
-    public R<List<BookingVO>> getBookings(
+    public Result<List<BookingVO>> getBookings(
             @RequestAttribute("userId") Long coachId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return R.ok(bookingService.getCoachBookings(coachId, date));
+        return Result.ok(bookingService.getCoachBookings(coachId, date));
     }
 
+    /**
+     * 确认预约（扣减学生课时）
+     * @param coachId 教练ID（从JWT解析）
+     * @param bookingId 预约ID
+     * @return 成功响应
+     */
     @PostMapping("/confirm/{bookingId}")
-    public R<Void> confirm(@RequestAttribute("userId") Long coachId, @PathVariable Long bookingId) {
+    public Result<Void> confirm(@RequestAttribute("userId") Long coachId, @PathVariable Long bookingId) {
         bookingService.confirm(coachId, bookingId);
-        return R.ok();
+        return Result.ok();
     }
 }

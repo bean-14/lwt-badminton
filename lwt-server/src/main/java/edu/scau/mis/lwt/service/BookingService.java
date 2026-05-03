@@ -7,17 +7,54 @@ import edu.scau.mis.lwt.pojo.vo.BookingVO;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * 预约服务接口
+ * 定义课程预约相关的业务逻辑方法
+ * 继承MyBatis-Plus的IService，获得基础CRUD能力
+ */
 public interface BookingService extends IService<Booking> {
 
+    /**
+     * 学生预约课程
+     * @param studentId 学生ID
+     * @param scheduleId 课程安排ID
+     */
     void book(Long studentId, Long scheduleId);
 
+    /**
+     * 教练确认预约（扣减学生课时）
+     * @param coachId 教练ID
+     * @param bookingId 预约ID
+     */
     void confirm(Long coachId, Long bookingId);
 
+    /**
+     * 取消预约
+     * @param userId 用户ID（学生或教练）
+     * @param bookingId 预约ID
+     */
     void cancel(Long userId, Long bookingId);
 
+    /**
+     * 获取学生的预约记录
+     * @param studentId 学生ID
+     * @param date 可选，按日期筛选
+     * @return 预约记录VO列表
+     */
     List<BookingVO> getStudentBookings(Long studentId, LocalDate date);
 
+    /**
+     * 获取教练的课程预约记录
+     * @param coachId 教练ID
+     * @param date 可选，按日期筛选
+     * @return 预约记录VO列表
+     */
     List<BookingVO> getCoachBookings(Long coachId, LocalDate date);
 
+    /**
+     * 获取学生的历史预约（已完成的课程）
+     * @param studentId 学生ID
+     * @return 已确认的预约记录VO列表
+     */
     List<BookingVO> getHistory(Long studentId);
 }

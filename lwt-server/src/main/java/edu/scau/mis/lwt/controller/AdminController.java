@@ -2,7 +2,7 @@ package edu.scau.mis.lwt.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import edu.scau.mis.lwt.common.base.BaseController;
-import edu.scau.mis.lwt.common.result.R;
+import edu.scau.mis.lwt.common.result.Result;
 import edu.scau.mis.lwt.mapper.BookingMapper;
 import edu.scau.mis.lwt.pojo.dto.RechargeDTO;
 import edu.scau.mis.lwt.pojo.entity.Booking;
@@ -22,6 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 管理员控制器
+ * 处理管理员相关的所有操作：场地管理、用户管理、课时充值、数据统计等
+ * 所有接口都需要JWT认证，且只能由管理员角色访问
+ */
 @RestController
 @RequestMapping("/admin")
 public class AdminController extends BaseController {
@@ -38,53 +43,93 @@ public class AdminController extends BaseController {
     @Autowired
     private BookingMapper bookingMapper;
 
+    /**
+     * 查看所有场地列表
+     * @return 场地列表
+     */
     @GetMapping("/venues")
-    public R<List<Venue>> listVenues() {
-        return R.ok(venueService.list());
+    public Result<List<Venue>> listVenues() {
+        return Result.ok(venueService.list());
     }
 
+    /**
+     * 添加新场地
+     * @param venue 场地信息（名称、位置等）
+     * @return 成功响应
+     */
     @PostMapping("/venue")
-    public R<Void> addVenue(@RequestBody Venue venue) {
-        venue.setStatus(1);
+    public Result<Void> addVenue(@RequestBody Venue venue) {
+        venue.setStatus(1); // 默认状态为可用
         venueService.save(venue);
-        return R.ok();
+        return Result.ok();
     }
 
+    /**
+     * 更新场地信息
+     * @param venue 场地信息（包含ID）
+     * @return 成功响应
+     */
     @PutMapping("/venue")
-    public R<Void> updateVenue(@RequestBody Venue venue) {
+    public Result<Void> updateVenue(@RequestBody Venue venue) {
         venueService.updateById(venue);
-        return R.ok();
+        return Result.ok();
     }
 
+    /**
+     * 查看所有教练列表
+     * @return 教练用户列表
+     */
     @GetMapping("/coaches")
-    public R<List<SysUser>> listCoaches() {
-        return R.ok(sysUserService.getCoaches());
+    public Result<List<SysUser>> listCoaches() {
+        return Result.ok(sysUserService.getCoaches());
     }
 
+    /**
+     * 查看所有学生列表
+     * @return 学生用户列表
+     */
     @GetMapping("/students")
-    public R<List<SysUser>> listStudents() {
-        return R.ok(sysUserService.getStudents());
+    public Result<List<SysUser>> listStudents() {
+        return Result.ok(sysUserService.getStudents());
     }
 
+    /**
+     * 添加新用户（教练或学生）
+     * @param user 用户信息（用户名、密码、用户类型等）
+     * @return 成功响应
+     */
     @PostMapping("/user")
-    public R<Void> addUser(@RequestBody SysUser user) {
+    public Result<Void> addUser(@RequestBody SysUser user) {
         sysUserService.save(user);
-        return R.ok();
+        return Result.ok();
     }
 
+    /**
+     * 为学生充值课时
+     * @param rechargeDTO 充值信息（学生ID、充值课时数）
+     * @return 成功响应
+     */
     @PostMapping("/recharge")
-    public R<Void> recharge(@RequestBody RechargeDTO rechargeDTO) {
+    public Result<Void> recharge(@RequestBody RechargeDTO rechargeDTO) {
         sysUserService.recharge(rechargeDTO);
-        return R.ok();
+        return Result.ok();
     }
 
+    /**
+     * 获取数据统计面板信息
+     * 包含：总预约数、各场地预约统计、各教练预约统计
+     * @param startDate 可选，统计开始日期
+     * @param endDate 可选，统计结束日期
+     * @return 包含统计数据的Map
+     */
     @GetMapping("/dashboard")
-    public R<Map<String, Object>> getDashboard(
+    public Result<Map<String, Object>> getDashboard(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         Map<String, Object> dashboard = new HashMap<>();
 
+        // 查询已确认的预约记录
         LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Booking::getStatus, "confirmed");
         if (startDate != null) {
@@ -97,6 +142,7 @@ public class AdminController extends BaseController {
         List<Booking> confirmedBookings = bookingMapper.selectList(wrapper);
         dashboard.put("totalBookings", confirmedBookings.size());
 
+        // 转换为VO并统计
         List<edu.scau.mis.lwt.pojo.vo.BookingVO> bookingVOs = confirmedBookings.stream().map(b -> {
             edu.scau.mis.lwt.pojo.vo.BookingVO vo = new edu.scau.mis.lwt.pojo.vo.BookingVO();
             BeanUtils.copyProperties(b, vo);
@@ -107,14 +153,16 @@ public class AdminController extends BaseController {
             return vo;
         }).collect(Collectors.toList());
 
+        // 按场地统计预约数
         Map<String, Long> venueStats = bookingVOs.stream()
                 .collect(Collectors.groupingBy(edu.scau.mis.lwt.pojo.vo.BookingVO::getVenueName, Collectors.counting()));
         dashboard.put("venueStats", venueStats);
 
+        // 按教练统计预约数
         Map<String, Long> coachStats = bookingVOs.stream()
                 .collect(Collectors.groupingBy(edu.scau.mis.lwt.pojo.vo.BookingVO::getCoachName, Collectors.counting()));
         dashboard.put("coachStats", coachStats);
 
-        return R.ok(dashboard);
+        return Result.ok(dashboard);
     }
 }

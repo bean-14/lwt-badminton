@@ -34,10 +34,6 @@ public class CoachScheduleServiceImpl extends ServiceImpl<CoachScheduleMapper, C
     @Autowired
     private VenueMapper venueMapper;
 
-    /**
-     * 添加排课表
-     * @param scheduleDTO 排课信息（教练ID、场地ID、日期、时间等）
-     */
     @Override
     public void addSchedule(ScheduleDTO scheduleDTO) {
         LambdaQueryWrapper<CoachSchedule> wrapper = new LambdaQueryWrapper<>();
@@ -63,12 +59,6 @@ public class CoachScheduleServiceImpl extends ServiceImpl<CoachScheduleMapper, C
         save(schedule);
     }
 
-    /**
-     * 读取所有排课表
-     * @param date 可选，按日期筛选
-     * @param coachId 可选，按教练筛选
-     * @return
-     */
     @Override
     public List<ScheduleVO> getAvailableSchedules(LocalDate date, Long coachId) {
         LambdaQueryWrapper<CoachSchedule> wrapper = new LambdaQueryWrapper<>();
@@ -83,12 +73,6 @@ public class CoachScheduleServiceImpl extends ServiceImpl<CoachScheduleMapper, C
         return buildScheduleVOs(schedules);
     }
 
-    /**
-     * 读取单个教练排课表
-     * @param coachId 教练ID
-     * @param date 可选，按日期筛选
-     * @return
-     */
     @Override
     public List<ScheduleVO> getCoachSchedules(Long coachId, LocalDate date) {
         LambdaQueryWrapper<CoachSchedule> wrapper = new LambdaQueryWrapper<>();
@@ -102,10 +86,6 @@ public class CoachScheduleServiceImpl extends ServiceImpl<CoachScheduleMapper, C
         return buildScheduleVOs(list(wrapper));
     }
 
-    /**
-     * 删除排课表
-     * @param scheduleId 排课ID
-     */
     @Override
     public void deleteSchedule(Long scheduleId) {
         CoachSchedule schedule = getById(scheduleId);
@@ -124,11 +104,6 @@ public class CoachScheduleServiceImpl extends ServiceImpl<CoachScheduleMapper, C
         removeById(scheduleId);
     }
 
-    /**
-     * 建立VO
-     * @param schedules
-     * @return
-     */
     private List<ScheduleVO> buildScheduleVOs(List<CoachSchedule> schedules) {
         return schedules.stream().map(schedule -> {
             ScheduleVO vo = new ScheduleVO();

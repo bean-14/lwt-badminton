@@ -3,6 +3,9 @@ package edu.scau.mis.lwt.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import edu.scau.mis.lwt.pojo.entity.Booking;
 import edu.scau.mis.lwt.pojo.vo.BookingVO;
+import edu.scau.mis.lwt.pojo.vo.CoachStatsVO;
+import edu.scau.mis.lwt.pojo.vo.StudentStatsVO;
+import edu.scau.mis.lwt.pojo.vo.VenueStatsVO;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -57,4 +60,28 @@ public interface BookingService extends IService<Booking> {
      * @return 已确认的预约记录VO列表
      */
     List<BookingVO> getHistory(Long studentId);
+
+    /**
+     * 统计各场地使用次数
+     * @param startDate 可选，统计开始日期
+     * @param endDate 可选，统计结束日期
+     * @return 场地使用统计列表
+     */
+    List<VenueStatsVO> getVenueStats(LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 统计各教练上课次数
+     * @param startDate 可选，统计开始日期
+     * @param endDate 可选，统计结束日期
+     * @return 教练上课统计列表
+     */
+    List<CoachStatsVO> getCoachStats(LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 统计各学生上课次数
+     * @param startDate 可选，统计开始日期
+     * @param endDate 可选，统计结束日期
+     * @return 学生上课统计列表
+     */
+    List<StudentStatsVO> getStudentStats(LocalDate startDate, LocalDate endDate);
 }

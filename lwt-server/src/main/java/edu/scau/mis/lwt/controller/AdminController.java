@@ -8,6 +8,10 @@ import edu.scau.mis.lwt.pojo.dto.RechargeDTO;
 import edu.scau.mis.lwt.pojo.entity.Booking;
 import edu.scau.mis.lwt.pojo.entity.SysUser;
 import edu.scau.mis.lwt.pojo.entity.Venue;
+import edu.scau.mis.lwt.pojo.vo.BookingVO;
+import edu.scau.mis.lwt.pojo.vo.CoachStatsVO;
+import edu.scau.mis.lwt.pojo.vo.StudentStatsVO;
+import edu.scau.mis.lwt.pojo.vo.VenueStatsVO;
 import edu.scau.mis.lwt.service.BookingService;
 import edu.scau.mis.lwt.service.SysUserService;
 import edu.scau.mis.lwt.service.VenueService;
@@ -143,8 +147,8 @@ public class AdminController extends BaseController {
         dashboard.put("totalBookings", confirmedBookings.size());
 
         // 转换为VO并统计
-        List<edu.scau.mis.lwt.pojo.vo.BookingVO> bookingVOs = confirmedBookings.stream().map(b -> {
-            edu.scau.mis.lwt.pojo.vo.BookingVO vo = new edu.scau.mis.lwt.pojo.vo.BookingVO();
+        List<BookingVO> bookingVOs = confirmedBookings.stream().map(b -> {
+            BookingVO vo = new BookingVO();
             BeanUtils.copyProperties(b, vo);
             SysUser student = sysUserService.getById(b.getStudentId());
             if (student != null) vo.setStudentName(student.getNickname());
@@ -155,14 +159,53 @@ public class AdminController extends BaseController {
 
         // 按场地统计预约数
         Map<String, Long> venueStats = bookingVOs.stream()
-                .collect(Collectors.groupingBy(edu.scau.mis.lwt.pojo.vo.BookingVO::getVenueName, Collectors.counting()));
+                .collect(Collectors.groupingBy(BookingVO::getVenueName, Collectors.counting()));
         dashboard.put("venueStats", venueStats);
 
         // 按教练统计预约数
         Map<String, Long> coachStats = bookingVOs.stream()
-                .collect(Collectors.groupingBy(edu.scau.mis.lwt.pojo.vo.BookingVO::getCoachName, Collectors.counting()));
+                .collect(Collectors.groupingBy(BookingVO::getCoachName, Collectors.counting()));
         dashboard.put("coachStats", coachStats);
 
         return Result.ok(dashboard);
+    }
+
+    /**
+     * 场地使用统计
+     * @param startDate 可选，统计开始日期
+     * @param endDate 可选，统计结束日期
+     * @return 各场地使用次数列表（按使用次数降序）
+     */
+    @GetMapping("/stats/venue")
+    public Result<List<VenueStatsVO>> getVenueStats(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return Result.ok(bookingService.getVenueStats(startDate, endDate));
+    }
+
+    /**
+     * 教练上课统计
+     * @param startDate 可选，统计开始日期
+     * @param endDate 可选，统计结束日期
+     * @return 各教练上课次数列表（按上课次数降序）
+     */
+    @GetMapping("/stats/coach")
+    public Result<List<CoachStatsVO>> getCoachStats(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return Result.ok(bookingService.getCoachStats(startDate, endDate));
+    }
+
+    /**
+     * 学生上课统计
+     * @param startDate 可选，统计开始日期
+     * @param endDate 可选，统计结束日期
+     * @return 各学生上课次数列表（按上课次数降序）
+     */
+    @GetMapping("/stats/student")
+    public Result<List<StudentStatsVO>> getStudentStats(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return Result.ok(bookingService.getStudentStats(startDate, endDate));
     }
 }

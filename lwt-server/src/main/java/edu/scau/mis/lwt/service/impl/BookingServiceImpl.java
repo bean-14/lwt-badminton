@@ -12,7 +12,12 @@ import edu.scau.mis.lwt.pojo.entity.CoachSchedule;
 import edu.scau.mis.lwt.pojo.entity.SysUser;
 import edu.scau.mis.lwt.pojo.entity.Venue;
 import edu.scau.mis.lwt.pojo.vo.BookingVO;
+import edu.scau.mis.lwt.pojo.vo.CoachStatsVO;
+import edu.scau.mis.lwt.pojo.vo.StudentStatsVO;
+import edu.scau.mis.lwt.pojo.vo.VenueStatsVO;
 import edu.scau.mis.lwt.service.BookingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,6 +35,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> implements BookingService {
+
+    private static final Logger log = LoggerFactory.getLogger(BookingServiceImpl.class);
 
     @Autowired
     private CoachScheduleMapper coachScheduleMapper;
@@ -237,5 +244,31 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
 
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * 统计各场地使用次数
+     */
+    @Override
+    public List<VenueStatsVO> getVenueStats(LocalDate startDate, LocalDate endDate) {
+        List<VenueStatsVO> result = baseMapper.getVenueStats(startDate, endDate);
+        log.info("getVenueStats result: {}", result);
+        return result;
+    }
+
+    /**
+     * 统计各教练上课次数
+     */
+    @Override
+    public List<CoachStatsVO> getCoachStats(LocalDate startDate, LocalDate endDate) {
+        return baseMapper.getCoachStats(startDate, endDate);
+    }
+
+    /**
+     * 统计各学生上课次数
+     */
+    @Override
+    public List<StudentStatsVO> getStudentStats(LocalDate startDate, LocalDate endDate) {
+        return baseMapper.getStudentStats(startDate, endDate);
     }
 }

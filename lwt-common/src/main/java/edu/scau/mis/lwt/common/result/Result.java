@@ -53,6 +53,14 @@ public class Result<T> implements Serializable {
         return result;
     }
 
+    public static <T> Result<T> ok(String msg, T data) {
+        Result<T> result = new Result<>();
+        result.setCode(200);
+        result.setMsg(msg);
+        result.setData(data);
+        return result;
+    }
+
     /**
      * 错误响应（默认500错误）
      * @param <T> 数据类型

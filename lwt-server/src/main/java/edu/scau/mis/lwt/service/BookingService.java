@@ -21,8 +21,9 @@ public interface BookingService extends IService<Booking> {
      * 学生预约课程
      * @param studentId 学生ID
      * @param scheduleId 课程安排ID
+     * @return 预约记录ID
      */
-    void book(Long studentId, Long scheduleId);
+    Long book(Long studentId, Long scheduleId);
 
     /**
      * 教练确认预约（扣减学生课时）

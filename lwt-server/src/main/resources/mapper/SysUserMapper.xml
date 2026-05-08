@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.scau.mis.lwt.mapper.SysUserMapper">
+
+    <!--
+        原子扣减课时（CAS 风格）
+
+        这个 SQL 不是先查再算再更新，而是一条语句完成"检查余额 + 扣减"。
+        MySQL 的 UPDATE 语句是原子性的，并发时由行锁保证只有一个事务能执行成功。
+
+        WHERE 条件 remaining_hours >= #{hours} 是关键：
+        - 余额足够 → 扣减成功，返回影响行数 1
+        - 余额不足 → 扣减失败，返回影响行数 0
+
+        上层 Java 代码通过判断影响行数来决定是否继续：
+        - 1 → 扣减成功
+        - 0 → "课时不足"异常
+    -->
+    <update id="deductHours">
+        UPDATE sys_user
+        SET remaining_hours = remaining_hours - #{hours}
+        WHERE id = #{id} AND remaining_hours >= #{hours}
+    </update>
+
+</mapper>

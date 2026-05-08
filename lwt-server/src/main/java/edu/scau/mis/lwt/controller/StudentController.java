@@ -47,16 +47,26 @@ public class StudentController extends BaseController {
     }
 
     /**
-     * 预约课程
+     * 预约课程（高并发写入 — Phase 1）
+     * <p>
+     * 业务流程：
+     *   1. BookingServiceImpl 中写入 DB（事务）
+     *   2. 事务提交后，尝试 WebSocket 推送给教练（在线则推送）
+     *   3. 同时发送 RabbitMQ 消息（保证微信通知最终送达）
+     *   4. 本接口立即返回，不等待微信通知完成
+     * <p>
+     * 响应示例：
+     *   {"code":200, "msg":"预约请求已提交", "data":1001}
+     *   前端拿到 bookingId 后可以跳转到预约详情页
+     *
      * @param studentId 学生ID（从JWT解析，由拦截器设置）
      * @param scheduleId 课程安排ID
-     * @return 成功响应
-     * 注意：会进行冲突检测（课时余额、时间冲突、场地冲突等）
+     * @return 快速返回，包含 bookingId
      */
     @PostMapping("/book/{scheduleId}")
-    public Result<Void> book(@RequestAttribute("userId") Long studentId, @PathVariable Long scheduleId) {
-        bookingService.book(studentId, scheduleId);
-        return Result.ok();
+    public Result<Long> book(@RequestAttribute("userId") Long studentId, @PathVariable Long scheduleId) {
+        Long bookingId = bookingService.book(studentId, scheduleId);
+        return Result.ok("预约请求已提交", bookingId);
     }
 
     /**

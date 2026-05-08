@@ -24,9 +24,13 @@ export type BookingVO = {
   venueId: number;
   venueName: string;
   scheduleDate: string;
+  startTime?: string;
+  endTime?: string;
   status: string;
   createTime: string;
   confirmTime: string;
+  leaveReason?: string;
+  leaveTime?: string;
 };
 
 /** 教练信息 */
@@ -73,6 +77,13 @@ export const getHistoryApi = () => {
 /** 取消预约 */
 export const cancelBookingApi = (bookingId: number) => {
   return http.request<null>("post", `/student/cancel/${bookingId}`);
+};
+
+/** 申请请假 */
+export const leaveApi = (bookingId: number, reason: string) => {
+  return http.request<null>("post", `/student/leave/${bookingId}`, {
+    params: { reason }
+  });
 };
 
 /** 查看所有教练 */

@@ -41,12 +41,11 @@
         <el-table-column prop="endTime" label="结束时间" min-width="100" />
         <el-table-column label="状态" min-width="80">
           <template #default="{ row }">
-            <el-tag
-              :type="row.status === 1 ? 'success' : 'danger'"
-              size="small"
-            >
-              {{ row.status === 1 ? "可用" : "不可用" }}
-            </el-tag>
+            <el-switch
+              :model-value="row.status === 1"
+              :loading="row._toggling"
+              @change="handleToggle(row)"
+            />
           </template>
         </el-table-column>
         <el-table-column label="操作" min-width="120" fixed="right">
@@ -138,7 +137,8 @@ import { Plus } from "@element-plus/icons-vue";
 import {
   addScheduleApi,
   getMySchedulesApi,
-  deleteScheduleApi
+  deleteScheduleApi,
+  toggleScheduleApi
 } from "@/api/coach";
 import { getVenuesApi } from "@/api/admin";
 import { useUserStoreHook } from "@/store/modules/user";
@@ -238,6 +238,20 @@ async function handleDelete(row: ScheduleVO) {
     fetchSchedules();
   } catch (e: any) {
     if (e?.message) ElMessage.error(e.message);
+  }
+}
+
+async function handleToggle(row: ScheduleVO & { _toggling?: boolean }) {
+  const enable = row.status !== 1;
+  row._toggling = true;
+  try {
+    await toggleScheduleApi(row.id, enable);
+    ElMessage.success(enable ? "已启用" : "已禁用");
+    fetchSchedules();
+  } catch (e: any) {
+    if (e?.message) ElMessage.error(e.message);
+  } finally {
+    row._toggling = false;
   }
 }
 

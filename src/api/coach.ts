@@ -24,9 +24,13 @@ export type BookingVO = {
   venueId: number;
   venueName: string;
   scheduleDate: string;
+  startTime?: string;
+  endTime?: string;
   status: string;
   createTime: string;
   confirmTime: string;
+  leaveReason?: string;
+  leaveTime?: string;
 };
 
 /** 设置可预约时段 */
@@ -50,6 +54,13 @@ export const deleteScheduleApi = (scheduleId: number) => {
   return http.request<null>("delete", `/coach/schedule/${scheduleId}`);
 };
 
+/** 启用/禁用排课 */
+export const toggleScheduleApi = (scheduleId: number, enable: boolean) => {
+  return http.request<null>("put", `/coach/schedule/${scheduleId}/toggle`, {
+    params: { enable }
+  });
+};
+
 /** 查看预约列表 */
 export const getCoachBookingsApi = (params?: { date?: string }) => {
   return http.request<BookingVO[]>("get", "/coach/bookings", { params });
@@ -58,4 +69,19 @@ export const getCoachBookingsApi = (params?: { date?: string }) => {
 /** 确认预约 */
 export const confirmBookingApi = (bookingId: number) => {
   return http.request<null>("post", `/coach/confirm/${bookingId}`);
+};
+
+/** 拒绝预约 */
+export const rejectBookingApi = (bookingId: number) => {
+  return http.request<null>("post", `/coach/reject/${bookingId}`);
+};
+
+/** 处理请假申请 */
+export const handleLeaveApi = (
+  bookingId: number,
+  action: "approve" | "reject"
+) => {
+  return http.request<null>("post", `/coach/handle-leave/${bookingId}`, {
+    params: { action }
+  });
 };

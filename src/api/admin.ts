@@ -74,3 +74,54 @@ export const getDashboardApi = (params?: {
 }) => {
   return http.request<DashboardData>("get", "/admin/dashboard", { params });
 };
+
+/** 场地使用统计 */
+export type VenueStatsItem = {
+  venueName: string;
+  location: string;
+  usageCount: number;
+};
+
+/** 教练上课统计 */
+export type CoachStatsItem = {
+  coachId: number;
+  coachName: string;
+  classCount: number;
+};
+
+/** 学生上课统计 */
+export type StudentStatsItem = {
+  studentId: number;
+  studentName: string;
+  classCount: number;
+};
+
+/** 场地使用统计 */
+export const getVenueStatsApi = (params?: {
+  startDate?: string;
+  endDate?: string;
+}) => {
+  return http.request<VenueStatsItem[]>("get", "/admin/stats/venue", {
+    params
+  });
+};
+
+/** 教练上课统计 */
+export const getCoachStatsApi = (params?: {
+  startDate?: string;
+  endDate?: string;
+}) => {
+  return http.request<CoachStatsItem[]>("get", "/admin/stats/coach", {
+    params
+  });
+};
+
+/** 学生上课统计 */
+export const getStudentStatsApi = (params?: {
+  startDate?: string;
+  endDate?: string;
+}) => {
+  return http.request<StudentStatsItem[]>("get", "/admin/stats/student", {
+    params
+  });
+};

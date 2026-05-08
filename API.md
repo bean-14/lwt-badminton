@@ -31,6 +31,53 @@ Authorization: Bearer <token>
 
 ---
 
+## 接口速查
+
+### Auth 认证模块（无需登录）
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/auth/login` | 用户登录 |
+| POST | `/auth/register` | 用户注册 |
+| GET | `/auth/info` | 获取当前用户信息 |
+
+### Student 学生模块
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/student/schedules` | 查看可预约时段 |
+| POST | `/student/book/{scheduleId}` | 预约课程 |
+| GET | `/student/bookings` | 查看我的预约 |
+| GET | `/student/history` | 查看上课历史 |
+| POST | `/student/cancel/{bookingId}` | 取消预约 |
+| POST | `/student/leave/{bookingId}` | 申请请假 |
+| GET | `/student/coaches` | 查看所有教练 |
+| GET | `/student/info` | 查看个人信息 |
+
+### Coach 教练模块
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/coach/schedule` | 设置可预约时段 |
+| GET | `/coach/schedules` | 查看我的排课 |
+| DELETE | `/coach/schedule/{scheduleId}` | 删除排课时段 |
+| GET | `/coach/bookings` | 查看预约列表 |
+| POST | `/coach/confirm/{bookingId}` | 确认预约 |
+
+### Admin 管理员模块
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/admin/venues` | 获取场地列表 |
+| POST | `/admin/venue` | 新增场地 |
+| PUT | `/admin/venue` | 更新场地 |
+| GET | `/admin/coaches` | 查看教练列表 |
+| GET | `/admin/students` | 查看学生列表 |
+| POST | `/admin/user` | 新增用户 |
+| POST | `/admin/recharge` | 课时充值 |
+| GET | `/admin/dashboard` | 数据看板 |
+| GET | `/admin/stats/venue` | 场地使用统计 |
+| GET | `/admin/stats/coach` | 教练上课统计 |
+| GET | `/admin/stats/student` | 学生上课统计 |
+
+---
+
 ## 1. Auth 认证模块
 
 ### 1.1 用户登录
@@ -180,7 +227,19 @@ Authorization: Bearer <token>
 
 ---
 
-### 2.6 查看所有教练
+### 2.6 申请请假
+**POST** `/student/leave/{bookingId}?reason=xxx`
+
+> **说明**：对已确认的预约申请请假。请假后课时不退还。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| bookingId | Long (路径参数) | 预约记录ID |
+| reason | String (查询参数) | 请假原因 |
+
+---
+
+### 2.7 查看所有教练
 **GET** `/student/coaches`
 
 > **说明**：获取所有状态正常的教练列表，用于选择教练查看其可预约时段
@@ -351,11 +410,8 @@ Authorization: Bearer <token>
   "data": {
     "totalBookings": 15,
     "venueStats": {
-      "1号场": 5,
-      "2号场": 4,
-      "3号场": 3,
-      "4号场": 2,
-      "5号场": 1
+      "Court 1": 5,
+      "Court 2": 4
     },
     "coachStats": {
       "王教练": 8,
@@ -373,6 +429,117 @@ Authorization: Bearer <token>
 
 ---
 
+### 4.5 场地使用统计
+**GET** `/admin/stats/venue`
+
+> **说明**：获取各场地的使用次数统计（基于SQL GROUP BY，性能更优）
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| startDate | String | 否 | 开始日期 |
+| endDate | String | 否 | 结束日期 |
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "venueName": "Court 1",
+      "location": "Building A, Floor 1",
+      "usageCount": 25
+    },
+    {
+      "venueName": "Court 2",
+      "location": "Building A, Floor 1",
+      "usageCount": 18
+    }
+  ]
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| venueName | 场地名称 |
+| location | 场地位置 |
+| usageCount | 使用次数（已确认的预约数） |
+
+---
+
+### 4.6 教练上课统计
+**GET** `/admin/stats/coach`
+
+> **说明**：获取各教练的上课次数统计
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| startDate | String | 否 | 开始日期 |
+| endDate | String | 否 | 结束日期 |
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "coachId": 2,
+      "coachName": "王教练",
+      "classCount": 15
+    },
+    {
+      "coachId": 3,
+      "coachName": "李教练",
+      "classCount": 10
+    }
+  ]
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| coachId | 教练ID |
+| coachName | 教练昵称 |
+| classCount | 上课次数（已确认的预约数） |
+
+---
+
+### 4.7 学生上课统计
+**GET** `/admin/stats/student`
+
+> **说明**：获取各学生的上课次数统计
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| startDate | String | 否 | 开始日期 |
+| endDate | String | 否 | 结束日期 |
+
+**响应示例**：
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "studentId": 4,
+      "studentName": "小张",
+      "classCount": 8
+    },
+    {
+      "studentId": 5,
+      "studentName": "小陈",
+      "classCount": 5
+    }
+  ]
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| studentId | 学生ID |
+| studentName | 学生昵称 |
+| classCount | 上课次数（已确认的预约数） |
+
+---
+
 ## 5. 预约状态说明
 
 | 状态 | 说明 |
@@ -380,8 +547,29 @@ Authorization: Bearer <token>
 | `pending` | 学生已发起预约，等待教练确认 |
 | `confirmed` | 教练已确认，课时已扣除 |
 | `cancelled` | 预约已取消（仅 pending 状态可取消） |
+| `leave` | 学生已请假（课时不退还） |
 
-## 6. 冲突检测逻辑
+## 6. BookingVO 数据结构
+
+用于预约相关接口返回的详细数据结构：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | Long | 预约ID |
+| studentId | Long | 学生ID |
+| studentName | String | 学生昵称 |
+| coachId | Long | 教练ID |
+| coachName | String | 教练昵称 |
+| venueId | Long | 场地ID |
+| venueName | String | 场地名称 |
+| scheduleDate | String | 预约日期（yyyy-MM-dd） |
+| status | String | 状态：pending/confirmed/cancelled/leave |
+| createTime | String | 创建时间 |
+| confirmTime | String | 确认时间 |
+| leaveReason | String | 请假原因（仅leave状态有值） |
+| leaveTime | String | 请假时间 |
+
+## 7. 冲突检测逻辑
 
 ### 预约时（学生端）
 ```

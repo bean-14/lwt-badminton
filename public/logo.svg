@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- 羽毛裙摆 -->
+  <path d="M11 14 L8 4 Q16 1 24 4 L21 14 Z" fill="#f5f7fa" stroke="#dcdfe6" stroke-width="0.8"/>
+  <path d="M11 14 Q16 17 21 14" fill="none" stroke="#dcdfe6" stroke-width="0.8"/>
+  <!-- 羽毛分割线 -->
+  <line x1="11.5" y1="13" x2="9.5" y2="4.5" stroke="#e4e7ed" stroke-width="0.6" stroke-linecap="round"/>
+  <line x1="20.5" y1="13" x2="22.5" y2="4.5" stroke="#e4e7ed" stroke-width="0.6" stroke-linecap="round"/>
+  <line x1="13.5" y1="14.5" x2="13" y2="2.5" stroke="#e4e7ed" stroke-width="0.6" stroke-linecap="round"/>
+  <line x1="18.5" y1="14.5" x2="19" y2="2.5" stroke="#e4e7ed" stroke-width="0.6" stroke-linecap="round"/>
+  <line x1="16" y1="15" x2="16" y2="2" stroke="#e4e7ed" stroke-width="0.6" stroke-linecap="round"/>
+  <!-- 球头 -->
+  <path d="M11 14 C11 21, 21 21, 21 14 Z" fill="#409EFF"/>
+  <!-- 球头横纹 -->
+  <path d="M11.5 16.5 Q16 18.5 20.5 16.5" fill="none" stroke="#337ecc" stroke-width="0.6"/>
+  <path d="M12 18.5 Q16 20.5 20 18.5" fill="none" stroke="#337ecc" stroke-width="0.6"/>
+</svg>

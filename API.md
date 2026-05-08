@@ -393,7 +393,7 @@ Authorization: Bearer <token>
 
 ---
 
-### 4.4 数据看板
+### 4.4 数据看板-
 **GET** `/admin/dashboard`
 
 > **说明**：预约统计数据，用于数据看板展示

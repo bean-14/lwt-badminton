@@ -72,10 +72,12 @@ public class CoachScheduleServiceImpl extends ServiceImpl<CoachScheduleMapper, C
     @Override
     public List<ScheduleVO> getAvailableSchedules(LocalDate date, Long coachId) {
         LambdaQueryWrapper<CoachSchedule> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CoachSchedule::getScheduleDate, date)
-               .eq(CoachSchedule::getStatus, 1);
+        wrapper.eq(CoachSchedule::getStatus, 1);
         if (coachId != null) {
             wrapper.eq(CoachSchedule::getCoachId, coachId);
+        }
+        if (date != null) {
+            wrapper.eq(CoachSchedule::getScheduleDate, date);
         }
         wrapper.orderByAsc(CoachSchedule::getStartTime);
 

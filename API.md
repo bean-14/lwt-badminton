@@ -48,7 +48,7 @@ Authorization: Bearer <token>
 | GET | `/student/bookings` | 查看我的预约 |
 | GET | `/student/history` | 查看上课历史 |
 | POST | `/student/cancel/{bookingId}` | 取消预约 |
-| POST | `/student/leave/{bookingId}` | 申请请假 |
+| POST | `/student/leave/{bookingId}?reason=xxx` | 申请请假 |
 | GET | `/student/coaches` | 查看所有教练 |
 | GET | `/student/info` | 查看个人信息 |
 
@@ -57,9 +57,12 @@ Authorization: Bearer <token>
 |------|------|------|
 | POST | `/coach/schedule` | 设置可预约时段 |
 | GET | `/coach/schedules` | 查看我的排课 |
+| PUT | `/coach/schedule/{scheduleId}/toggle?enable=true\|false` | 启用/禁用排课 |
 | DELETE | `/coach/schedule/{scheduleId}` | 删除排课时段 |
 | GET | `/coach/bookings` | 查看预约列表 |
-| POST | `/coach/confirm/{bookingId}` | 确认预约 |
+| POST | `/coach/confirm/{bookingId}` | 接收预约（扣课时） |
+| POST | `/coach/reject/{bookingId}` | 拒绝预约 |
+| POST | `/coach/handle-leave/{bookingId}?action=approve\|reject` | 处理请假申请 |
 
 ### Admin 管理员模块
 | 方法 | 路径 | 说明 |
@@ -190,7 +193,7 @@ Authorization: Bearer <token>
 > 3. 学生是否已预约该教练该时段
 > 4. 该场地该时段是否已被其他学生占用
 
-**预约成功条件**：以上检查全部通过，创建状态为 `pending`（待确认）的预约记录
+预约时自动保存 startTime、endTime 到预约记录。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -201,7 +204,7 @@ Authorization: Bearer <token>
 ### 2.3 查看我的预约
 **GET** `/student/bookings`
 
-> **说明**：查看当前学生的所有预约记录（pending/confirmed/cancelled），可按日期筛选
+> **说明**：查看当前学生的所有预约记录，可按日期筛选。自动处理过期状态转换
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -212,7 +215,7 @@ Authorization: Bearer <token>
 ### 2.4 查看上课历史
 **GET** `/student/history`
 
-> **说明**：查看已完成（confirmed）的历史上课记录，按时间倒序
+> **说明**：查看已完成（completed）的历史上课记录，按时间倒序
 
 ---
 
@@ -230,7 +233,9 @@ Authorization: Bearer <token>
 ### 2.6 申请请假
 **POST** `/student/leave/{bookingId}?reason=xxx`
 
-> **说明**：对已确认的预约申请请假。请假后课时不退还。
+> **说明**：对已确认的预约申请请假：
+> - 提前请假（日期 > 今天）：自动同意，退还 1 课时，状态变为 cancelled
+> - 当天请假（日期 == 今天）：状态变为 leave_pending，等待教练审批
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -246,7 +251,7 @@ Authorization: Bearer <token>
 
 ---
 
-### 2.7 查看个人信息（含剩余课时）
+### 2.8 查看个人信息（含剩余课时）
 **GET** `/student/info`
 
 > **说明**：获取当前学生的详细信息，包含 `remainingHours`（剩余课时）
@@ -301,10 +306,33 @@ Authorization: Bearer <token>
 
 ---
 
-### 3.4 查看预约列表
+### 3.3 删除排课时段
+**DELETE** `/coach/schedule/{scheduleId}`
+
+> **说明**：删除自己设置的时段。如果该时段已有学生预约（pending），则不允许删除
+
+---
+
+### 3.4 启用/禁用排课
+**PUT** `/coach/schedule/{scheduleId}/toggle?enable=true|false`
+
+> **说明**：启用或禁用某个排课时段：
+> - 禁用（enable=false）：直接设为不可用，学生端不可见，不影响已有预约
+> - 启用（enable=true）：设为可用，同时检测该教练同一时间是否已有其他启用的排课，有冲突则拒绝
+
+**请求参数**：
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| scheduleId | Long (路径参数) | 排课ID |
+| enable | Boolean (查询参数) | true=启用，false=禁用 |
+
+---
+
+### 3.5 查看预约列表
 **GET** `/coach/bookings`
 
-> **说明**：查看学生的预约申请，包括 pending（待确认）和 confirmed（已确认）的记录
+> **说明**：查看学生的预约申请，包含所有状态的记录。自动处理过期状态转换
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -312,16 +340,41 @@ Authorization: Bearer <token>
 
 ---
 
-### 3.5 确认预约
+### 3.5 接收预约
 **POST** `/coach/confirm/{bookingId}`
 
-> **说明**：教练核实学生上课后点击确认。执行以下操作：
+> **说明**：教练接收学生的预约请求。执行以下操作：
 > 1. 将预约状态从 `pending` 改为 `confirmed`
 > 2. **自动扣除学生 1 课时**（`remaining_hours - 1`）
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | bookingId | Long (路径参数) | 预约记录ID |
+
+---
+
+### 3.6 拒绝预约
+**POST** `/coach/reject/{bookingId}`
+
+> **说明**：教练拒绝学生的预约请求，状态变为 `rejected`，不扣课时
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| bookingId | Long (路径参数) | 预约记录ID |
+
+---
+
+### 3.7 处理请假申请
+**POST** `/coach/handle-leave/{bookingId}?action=approve|reject`
+
+> **说明**：教练处理学生的当天请假申请
+> - approve：同意请假，退还 1 课时，状态变为 cancelled
+> - reject：拒绝请假，状态恢复为 confirmed
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| bookingId | Long (路径参数) | 预约记录ID |
+| action | String (查询参数) | approve 或 reject |
 
 ---
 
@@ -393,10 +446,10 @@ Authorization: Bearer <token>
 
 ---
 
-### 4.4 数据看板-
+### 4.4 数据看板
 **GET** `/admin/dashboard`
 
-> **说明**：预约统计数据，用于数据看板展示
+> **说明**：预约统计数据，用于数据看板展示（统计 confirmed + completed 状态的预约）
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -423,7 +476,7 @@ Authorization: Bearer <token>
 
 | 字段 | 说明 |
 |------|------|
-| totalBookings | 指定时间内已完成（confirmed）的预约总数 |
+| totalBookings | 指定时间内已完成（confirmed + completed）的预约总数 |
 | venueStats | 各场地的预约次数统计 |
 | coachStats | 各教练的预约次数统计 |
 
@@ -432,7 +485,7 @@ Authorization: Bearer <token>
 ### 4.5 场地使用统计
 **GET** `/admin/stats/venue`
 
-> **说明**：获取各场地的使用次数统计（基于SQL GROUP BY，性能更优）
+> **说明**：获取各场地的使用次数统计（基于SQL GROUP BY）
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -542,12 +595,32 @@ Authorization: Bearer <token>
 
 ## 5. 预约状态说明
 
-| 状态 | 说明 |
-|------|------|
-| `pending` | 学生已发起预约，等待教练确认 |
-| `confirmed` | 教练已确认，课时已扣除 |
-| `cancelled` | 预约已取消（仅 pending 状态可取消） |
-| `leave` | 学生已请假（课时不退还） |
+| 状态 | 说明 | 前端标签 |
+|------|------|---------|
+| `pending` | 学生已发起预约，等待教练接收 | 待确认（黄） |
+| `confirmed` | 教练已接收预约，课时已扣除 | 已同意/已接收（蓝） |
+| `completed` | 上课时间已过，自动完成（confirmed 过期自动转入） | 已完成（绿） |
+| `cancelled` | 预约已取消（学生取消 / 教练同意请假退课时） | 已取消（灰） |
+| `rejected` | 教练拒绝预约 | 教练已拒绝/已拒绝（红） |
+| `no_confirm` | 预约时间过了，教练未接收 | 教练未确认/未确认（红） |
+| `leave_pending` | 学生当天请假，等待教练审批 | 请假待审批（黄） |
+| `leave` | 已请假（旧状态，不再使用） | 已请假（红） |
+
+### 状态流转图
+
+```
+学生预约 → pending
+              ├── 教练接收 → confirmed → completed（时间到自动）
+              ├── 教练拒绝 → rejected
+              └── 过期未处理 → no_confirm
+
+请假（仅 confirmed 可发起）：
+confirmed → 提前请假 → cancelled（自动退课时）
+confirmed → 当天请假 → leave_pending
+                          ├── 教练同意 → cancelled（退课时）
+                          ├── 教练拒绝 → confirmed → completed
+                          └── 过期未处理 → completed
+```
 
 ## 6. BookingVO 数据结构
 
@@ -563,10 +636,12 @@ Authorization: Bearer <token>
 | venueId | Long | 场地ID |
 | venueName | String | 场地名称 |
 | scheduleDate | String | 预约日期（yyyy-MM-dd） |
-| status | String | 状态：pending/confirmed/cancelled/leave |
+| startTime | String | 开始时间（HH:mm:ss） |
+| endTime | String | 结束时间（HH:mm:ss） |
+| status | String | 状态：见预约状态说明 |
 | createTime | String | 创建时间 |
 | confirmTime | String | 确认时间 |
-| leaveReason | String | 请假原因（仅leave状态有值） |
+| leaveReason | String | 请假原因（仅leave_pending/leave状态有值） |
 | leaveTime | String | 请假时间 |
 
 ## 7. 冲突检测逻辑
@@ -585,3 +660,13 @@ Authorization: Bearer <token>
 2. 检查该场地该时段是否已有排课
 3. 检查时间段是否重叠（开始/结束时间交叉）
 ```
+
+## 8. 过期自动处理规则
+
+系统在查询预约列表时自动处理过期记录，规则如下：
+
+| 原状态 | 条件 | 新状态 |
+|--------|------|--------|
+| confirmed | scheduleDate < 今天 或 (scheduleDate == 今天 且 endTime < 当前时间) | completed |
+| pending | 同上 | no_confirm |
+| leave_pending | 同上 | completed |

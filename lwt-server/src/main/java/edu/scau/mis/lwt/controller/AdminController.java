@@ -133,9 +133,9 @@ public class AdminController extends BaseController {
 
         Map<String, Object> dashboard = new HashMap<>();
 
-        // 查询已确认的预约记录
+        // 查询已确认/已完成的预约记录
         LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Booking::getStatus, "confirmed");
+        wrapper.in(Booking::getStatus, "confirmed", "completed");
         if (startDate != null) {
             wrapper.ge(Booking::getScheduleDate, startDate);
         }
@@ -154,6 +154,8 @@ public class AdminController extends BaseController {
             if (student != null) vo.setStudentName(student.getNickname());
             SysUser coach = sysUserService.getById(b.getCoachId());
             if (coach != null) vo.setCoachName(coach.getNickname());
+            Venue venue = venueService.getById(b.getVenueId());
+            if (venue != null) vo.setVenueName(venue.getName());
             return vo;
         }).collect(Collectors.toList());
 

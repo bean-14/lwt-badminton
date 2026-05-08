@@ -6,6 +6,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * 课程预约实体类
@@ -43,6 +44,16 @@ public class Booking implements Serializable {
     private LocalDate scheduleDate;
 
     /**
+     * 开始时间
+     */
+    private LocalTime startTime;
+
+    /**
+     * 结束时间
+     */
+    private LocalTime endTime;
+
+    /**
      * 预约状态：pending-待确认，confirmed-已确认，cancelled-已取消
      */
     private String status;
@@ -57,4 +68,14 @@ public class Booking implements Serializable {
      * 确认时间（教练确认预约时设置）
      */
     private LocalDateTime confirmTime;
+
+    /**
+     * 请假原因
+     */
+    private String leaveReason;
+
+    /**
+     * 请假时间
+     */
+    private LocalDateTime leaveTime;
 }

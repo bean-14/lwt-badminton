@@ -48,9 +48,13 @@ CREATE TABLE booking (
     coach_id BIGINT NOT NULL COMMENT 'Coach user ID',
     venue_id BIGINT NOT NULL COMMENT 'Venue ID',
     schedule_date DATE NOT NULL COMMENT 'Booking date',
-    status VARCHAR(20) DEFAULT 'pending' COMMENT 'pending / confirmed / cancelled',
+    start_time TIME COMMENT 'Class start time',
+    end_time TIME COMMENT 'Class end time',
+    status VARCHAR(20) DEFAULT 'pending' COMMENT 'pending / confirmed / completed / cancelled / rejected / no_confirm / leave / leave_pending',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     confirm_time DATETIME COMMENT 'Confirmation time',
+    leave_reason VARCHAR(500) COMMENT 'Leave reason',
+    leave_time DATETIME COMMENT 'Leave request time',
     INDEX idx_student_date (student_id, schedule_date),
     INDEX idx_coach_date (coach_id, schedule_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Booking record';

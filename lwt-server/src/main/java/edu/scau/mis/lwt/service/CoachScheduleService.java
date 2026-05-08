@@ -42,4 +42,13 @@ public interface CoachScheduleService extends IService<CoachSchedule> {
      * @param scheduleId 排课ID
      */
     void deleteSchedule(Long scheduleId);
+
+    /**
+     * 启用/禁用排课
+     * 启用时会检测该教练该时段是否有其他已启用的排课冲突
+     * @param scheduleId 排课ID
+     * @param coachId 教练ID（权限校验）
+     * @param enable true=启用，false=禁用
+     */
+    void toggleSchedule(Long scheduleId, Long coachId, boolean enable);
 }

@@ -96,6 +96,21 @@ public class StudentController extends BaseController {
     }
 
     /**
+     * 申请请假
+     * @param studentId 学生ID（从JWT解析）
+     * @param bookingId 预约ID
+     * @param reason 请假原因
+     * @return 成功响应
+     */
+    @PostMapping("/leave/{bookingId}")
+    public Result<Void> leave(@RequestAttribute("userId") Long studentId,
+                              @PathVariable Long bookingId,
+                              @RequestParam String reason) {
+        bookingService.leave(studentId, bookingId, reason);
+        return Result.ok();
+    }
+
+    /**
      * 查看所有教练列表
      * @return 教练用户信息列表
      */

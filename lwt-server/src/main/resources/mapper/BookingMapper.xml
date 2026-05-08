@@ -7,7 +7,7 @@
         SELECT v.name AS venueName, v.location AS location, COUNT(b.id) AS usageCount
         FROM booking b
         INNER JOIN venue v ON b.venue_id = v.id
-        WHERE b.status = 'confirmed'
+        WHERE b.status IN ('confirmed', 'completed')
         <if test="startDate != null">
             AND b.schedule_date &gt;= #{startDate}
         </if>
@@ -23,7 +23,7 @@
         SELECT b.coach_id AS coachId, u.nickname AS coachName, COUNT(b.id) AS classCount
         FROM booking b
         INNER JOIN sys_user u ON b.coach_id = u.id
-        WHERE b.status = 'confirmed'
+        WHERE b.status IN ('confirmed', 'completed')
         <if test="startDate != null">
             AND b.schedule_date &gt;= #{startDate}
         </if>
@@ -39,7 +39,7 @@
         SELECT b.student_id AS studentId, u.nickname AS studentName, COUNT(b.id) AS classCount
         FROM booking b
         INNER JOIN sys_user u ON b.student_id = u.id
-        WHERE b.status = 'confirmed'
+        WHERE b.status IN ('confirmed', 'completed')
         <if test="startDate != null">
             AND b.schedule_date &gt;= #{startDate}
         </if>

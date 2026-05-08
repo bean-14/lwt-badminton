@@ -125,6 +125,42 @@ public class CoachScheduleServiceImpl extends ServiceImpl<CoachScheduleMapper, C
     }
 
     /**
+     * 启用/禁用排课
+     * 启用时检测该教练该时段是否有其他已启用的排课冲突
+     */
+    @Override
+    public void toggleSchedule(Long scheduleId, Long coachId, boolean enable) {
+        CoachSchedule schedule = getById(scheduleId);
+        if (schedule == null) {
+            throw new BusinessException(404, "排课不存在");
+        }
+        if (!schedule.getCoachId().equals(coachId)) {
+            throw new BusinessException(403, "无权操作");
+        }
+
+        if (enable) {
+            LambdaQueryWrapper<CoachSchedule> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(CoachSchedule::getCoachId, schedule.getCoachId())
+                   .eq(CoachSchedule::getScheduleDate, schedule.getScheduleDate())
+                   .eq(CoachSchedule::getStatus, 1)
+                   .ne(CoachSchedule::getId, scheduleId)
+                   .and(w -> w
+                       .between(CoachSchedule::getStartTime, schedule.getStartTime(), schedule.getEndTime())
+                       .or()
+                       .between(CoachSchedule::getEndTime, schedule.getStartTime(), schedule.getEndTime())
+                       .or()
+                       .le(CoachSchedule::getStartTime, schedule.getStartTime())
+                       .ge(CoachSchedule::getEndTime, schedule.getEndTime()));
+            if (count(wrapper) > 0) {
+                throw new BusinessException(400, "该时段与已有排课冲突，无法启用");
+            }
+        }
+
+        schedule.setStatus(enable ? 1 : 0);
+        updateById(schedule);
+    }
+
+    /**
      * 建立VO
      * @param schedules
      * @return

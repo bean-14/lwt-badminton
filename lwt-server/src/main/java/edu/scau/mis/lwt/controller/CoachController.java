@@ -65,6 +65,22 @@ public class CoachController extends BaseController {
     }
 
     /**
+     * 启用/禁用排课
+     * @param coachId 教练ID（从JWT解析）
+     * @param scheduleId 排课ID
+     * @param enable true=启用，false=禁用
+     * @return 成功响应
+     */
+    @PutMapping("/schedule/{scheduleId}/toggle")
+    public Result<Void> toggleSchedule(
+            @RequestAttribute("userId") Long coachId,
+            @PathVariable Long scheduleId,
+            @RequestParam boolean enable) {
+        coachScheduleService.toggleSchedule(scheduleId, coachId, enable);
+        return Result.ok();
+    }
+
+    /**
      * 查看我的课程预约
      * @param coachId 教练ID（从JWT解析）
      * @param date 可选，按日期筛选
@@ -86,6 +102,33 @@ public class CoachController extends BaseController {
     @PostMapping("/confirm/{bookingId}")
     public Result<Void> confirm(@RequestAttribute("userId") Long coachId, @PathVariable Long bookingId) {
         bookingService.confirm(coachId, bookingId);
+        return Result.ok();
+    }
+
+    /**
+     * 拒绝预约
+     * @param coachId 教练ID（从JWT解析）
+     * @param bookingId 预约ID
+     * @return 成功响应
+     */
+    @PostMapping("/reject/{bookingId}")
+    public Result<Void> reject(@RequestAttribute("userId") Long coachId, @PathVariable Long bookingId) {
+        bookingService.reject(coachId, bookingId);
+        return Result.ok();
+    }
+
+    /**
+     * 处理学生请假申请
+     * @param coachId 教练ID（从JWT解析）
+     * @param bookingId 预约ID
+     * @param action approve=同意并退还课时, reject=拒绝
+     * @return 成功响应
+     */
+    @PostMapping("/handle-leave/{bookingId}")
+    public Result<Void> handleLeave(@RequestAttribute("userId") Long coachId,
+                                    @PathVariable Long bookingId,
+                                    @RequestParam String action) {
+        bookingService.handleLeave(coachId, bookingId, action);
         return Result.ok();
     }
 }

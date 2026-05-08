@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -88,11 +89,13 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
             throw new BusinessException(400, "您已预约该教练该时段的课程");
         }
 
-        // 4. 检查场地是否已被预约
+        // 4. 检查场地该时段是否已被预约（时间段重叠检测）
         wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Booking::getVenueId, schedule.getVenueId())
                .eq(Booking::getScheduleDate, schedule.getScheduleDate())
-               .in(Booking::getStatus, "pending", "confirmed");
+               .in(Booking::getStatus, "pending", "confirmed")
+               .lt(Booking::getStartTime, schedule.getEndTime())
+               .gt(Booking::getEndTime, schedule.getStartTime());
         if (count(wrapper) > 0) {
             throw new BusinessException(400, "该场地该时段已被预约");
         }
@@ -103,6 +106,8 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setCoachId(schedule.getCoachId());
         booking.setVenueId(schedule.getVenueId());
         booking.setScheduleDate(schedule.getScheduleDate());
+        booking.setStartTime(schedule.getStartTime());
+        booking.setEndTime(schedule.getEndTime());
         booking.setStatus("pending");
         save(booking);
     }
@@ -142,6 +147,29 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     }
 
     /**
+     * 教练拒绝预约
+     * @param coachId 教练ID
+     * @param bookingId 预约ID
+     */
+    @Override
+    @Transactional
+    public void reject(Long coachId, Long bookingId) {
+        Booking booking = getById(bookingId);
+        if (booking == null) {
+            throw new BusinessException(404, "预约不存在");
+        }
+        if (!booking.getCoachId().equals(coachId)) {
+            throw new BusinessException(403, "无权操作");
+        }
+        if (!"pending".equals(booking.getStatus())) {
+            throw new BusinessException(400, "该预约已处理");
+        }
+
+        booking.setStatus("rejected");
+        updateById(booking);
+    }
+
+    /**
      * 取消预约
      * @param userId 用户ID（学生或教练）
      * @param bookingId 预约ID
@@ -167,6 +195,141 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     }
 
     /**
+     * 学生申请请假
+     * 提前请假（scheduleDate > 今天）→ 自动同意，退还课时，状态 cancelled
+     * 当天请假（scheduleDate == 今天）→ 状态 leave_pending，等待教练审批
+     * @param studentId 学生ID
+     * @param bookingId 预约ID
+     * @param reason 请假原因
+     */
+    @Override
+    @Transactional
+    public void leave(Long studentId, Long bookingId, String reason) {
+        Booking booking = getById(bookingId);
+        if (booking == null) {
+            throw new BusinessException(404, "预约不存在");
+        }
+        if (!booking.getStudentId().equals(studentId)) {
+            throw new BusinessException(403, "无权操作");
+        }
+        if (!"confirmed".equals(booking.getStatus())) {
+            throw new BusinessException(400, "只能对已确认的预约请假");
+        }
+
+        booking.setLeaveReason(reason);
+        booking.setLeaveTime(LocalDateTime.now());
+
+        LocalDate today = LocalDate.now();
+        if (booking.getScheduleDate().isAfter(today)) {
+            // 提前请假 — 自动同意，退还课时
+            SysUser student = sysUserMapper.selectById(studentId);
+            if (student != null) {
+                student.setRemainingHours(student.getRemainingHours() + 1);
+                sysUserMapper.updateById(student);
+            }
+            booking.setStatus("cancelled");
+        } else {
+            // 当天请假 — 等待教练审批
+            booking.setStatus("leave_pending");
+        }
+
+        updateById(booking);
+    }
+
+    /**
+     * 教练处理请假申请
+     * @param coachId 教练ID
+     * @param bookingId 预约ID
+     * @param action approve=同意并退还课时, reject=拒绝并恢复confirmed
+     */
+    @Override
+    @Transactional
+    public void handleLeave(Long coachId, Long bookingId, String action) {
+        Booking booking = getById(bookingId);
+        if (booking == null) {
+            throw new BusinessException(404, "预约不存在");
+        }
+        if (!booking.getCoachId().equals(coachId)) {
+            throw new BusinessException(403, "无权操作");
+        }
+        if (!"leave_pending".equals(booking.getStatus())) {
+            throw new BusinessException(400, "该预约没有待处理的请假申请");
+        }
+
+        if ("approve".equals(action)) {
+            // 同意请假，退还课时，状态改为 cancelled
+            SysUser student = sysUserMapper.selectById(booking.getStudentId());
+            if (student != null) {
+                student.setRemainingHours(student.getRemainingHours() + 1);
+                sysUserMapper.updateById(student);
+            }
+            booking.setStatus("cancelled");
+        } else if ("reject".equals(action)) {
+            // 拒绝请假，恢复 confirmed
+            booking.setStatus("confirmed");
+        } else {
+            throw new BusinessException(400, "无效操作，仅支持 approve/reject");
+        }
+
+        updateById(booking);
+    }
+
+    /**
+     * 处理过期待处理预约：
+     * - confirmed 且上课时间已过 → completed
+     * - leave_pending 且上课时间已过 → completed（教练未处理，视为拒绝）
+     */
+    @Transactional
+    public void processExpiredBookings() {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
+        // confirmed 过期 → completed
+        LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Booking::getStatus, "confirmed")
+               .and(w -> w.lt(Booking::getScheduleDate, today)
+                         .or(w2 -> w2.eq(Booking::getScheduleDate, today)
+                                     .isNotNull(Booking::getEndTime)
+                                     .lt(Booking::getEndTime, now)));
+        List<Booking> expiredConfirmed = list(wrapper);
+        for (Booking b : expiredConfirmed) {
+            b.setStatus("completed");
+        }
+        updateBatchById(expiredConfirmed);
+
+        // pending 过期 → no_confirm（教练未处理）
+        wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Booking::getStatus, "pending")
+               .and(w -> w.lt(Booking::getScheduleDate, today)
+                         .or(w2 -> w2.eq(Booking::getScheduleDate, today)
+                                     .isNotNull(Booking::getEndTime)
+                                     .lt(Booking::getEndTime, now)));
+        List<Booking> expiredPending = list(wrapper);
+        for (Booking b : expiredPending) {
+            b.setStatus("no_confirm");
+        }
+        updateBatchById(expiredPending);
+
+        // leave_pending 过期 → completed（视为拒绝）
+        wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Booking::getStatus, "leave_pending")
+               .and(w -> w.lt(Booking::getScheduleDate, today)
+                         .or(w2 -> w2.eq(Booking::getScheduleDate, today)
+                                     .isNotNull(Booking::getEndTime)
+                                     .lt(Booking::getEndTime, now)));
+        List<Booking> expiredLeave = list(wrapper);
+        for (Booking b : expiredLeave) {
+            b.setStatus("completed");
+        }
+        updateBatchById(expiredLeave);
+
+        if (!expiredConfirmed.isEmpty() || !expiredPending.isEmpty() || !expiredLeave.isEmpty()) {
+            log.info("Processed expired bookings: {} confirmed→completed, {} pending→no_confirm, {} leave_pending→completed",
+                    expiredConfirmed.size(), expiredPending.size(), expiredLeave.size());
+        }
+    }
+
+    /**
      * 获取学生的预约记录
      * @param studentId 学生ID
      * @param date 可选，按日期筛选
@@ -174,6 +337,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
      */
     @Override
     public List<BookingVO> getStudentBookings(Long studentId, LocalDate date) {
+        processExpiredBookings();
         LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Booking::getStudentId, studentId);
         if (date != null) {
@@ -191,6 +355,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
      */
     @Override
     public List<BookingVO> getCoachBookings(Long coachId, LocalDate date) {
+        processExpiredBookings();
         LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Booking::getCoachId, coachId);
         if (date != null) {
@@ -207,9 +372,10 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
      */
     @Override
     public List<BookingVO> getHistory(Long studentId) {
+        processExpiredBookings();
         LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Booking::getStudentId, studentId)
-               .eq(Booking::getStatus, "confirmed")
+               .eq(Booking::getStatus, "completed")
                .orderByDesc(Booking::getCreateTime);
         return buildBookingVOs(list(wrapper));
     }

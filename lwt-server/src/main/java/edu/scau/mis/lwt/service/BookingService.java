@@ -32,11 +32,34 @@ public interface BookingService extends IService<Booking> {
     void confirm(Long coachId, Long bookingId);
 
     /**
+     * 教练拒绝预约
+     * @param coachId 教练ID
+     * @param bookingId 预约ID
+     */
+    void reject(Long coachId, Long bookingId);
+
+    /**
      * 取消预约
      * @param userId 用户ID（学生或教练）
      * @param bookingId 预约ID
      */
     void cancel(Long userId, Long bookingId);
+
+    /**
+     * 学生申请请假
+     * @param studentId 学生ID
+     * @param bookingId 预约ID
+     * @param reason 请假原因
+     */
+    void leave(Long studentId, Long bookingId, String reason);
+
+    /**
+     * 教练处理请假申请
+     * @param coachId 教练ID
+     * @param bookingId 预约ID
+     * @param action approve 同意 / reject 拒绝
+     */
+    void handleLeave(Long coachId, Long bookingId, String action);
 
     /**
      * 获取学生的预约记录

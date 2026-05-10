@@ -93,7 +93,9 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
             wrapper.eq(Booking::getStudentId, studentId)
                    .eq(Booking::getScheduleDate, schedule.getScheduleDate())
                    .eq(Booking::getCoachId, schedule.getCoachId())
-                   .in(Booking::getStatus, "pending", "confirmed");
+                   .in(Booking::getStatus, "pending", "confirmed")
+                   .lt(Booking::getStartTime, schedule.getEndTime())
+                   .gt(Booking::getEndTime, schedule.getStartTime());
             if (count(wrapper) > 0) {
                 throw new BusinessException(400, "您已预约该教练该时段的课程");
             }

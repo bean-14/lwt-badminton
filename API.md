@@ -670,3 +670,107 @@ confirmed → 当天请假 → leave_pending
 | confirmed | scheduleDate < 今天 或 (scheduleDate == 今天 且 endTime < 当前时间) | completed |
 | pending | 同上 | no_confirm |
 | leave_pending | 同上 | completed |
+
+---
+
+## 9. 用户在线状态管理
+
+### 9.1 标记在线
+**POST** `/user/online`
+
+> **说明**：标记当前登录用户在线。前端在页面加载/登录成功时调用。
+>
+> 后端将用户 ID 写入 Redis（`user_online:{userId}`），有效期 24 小时。
+>
+> 需要 JWT 认证（`Authorization: Bearer <token>`）。
+
+**响应**：
+```json
+{ "code": 200, "msg": "success" }
+```
+
+### 9.2 标记离线
+**POST** `/user/offline`
+
+> **说明**：标记当前登录用户离线。前端在页面关闭/退出登录时调用。
+>
+> 后端从 Redis 删除 `user_online:{userId}`。
+>
+> 需要 JWT 认证。
+
+**响应**：
+```json
+{ "code": 200, "msg": "success" }
+```
+
+---
+
+## 10. WebSocket 实时通知
+
+### 10.1 连接说明
+
+系统使用 **STOMP over WebSocket**（基于 SockJS）实现实时推送。
+
+| 项目 | 说明 |
+|------|------|
+| 端点 | `http://localhost:8080/ws`（SockJS） |
+| 协议 | STOMP |
+| 认证 | 需在 STOMP CONNECT 帧的 Header 中携带 `Authorization: Bearer <token>` |
+
+### 10.2 订阅频道
+
+| 用户角色 | 频道 | 说明 |
+|----------|------|------|
+| 教练 | `/topic/coach/{coachId}` | 收到新预约通知 |
+| 学生 | `/topic/student/{studentId}` | 收到教练确认通知 |
+
+### 10.3 消息格式
+
+#### 新预约通知（教练端）
+**频道**：`/topic/coach/{coachId}`
+
+**触发时机**：学生预约成功，且该教练在线
+
+```json
+{
+  "type": "BOOKING_NEW",
+  "bookingId": 1001,
+  "studentName": "张三",
+  "timestamp": 1715330000000
+}
+```
+
+#### 确认通知（学生端）
+**频道**：`/topic/student/{studentId}`
+
+**触发时机**：教练确认预约，且该学生在线
+
+```json
+{
+  "type": "BOOKING_CONFIRMED",
+  "bookingId": 1001,
+  "coachName": "王教练",
+  "message": "教练已确认，预约成功！",
+  "timestamp": 1715330000000
+}
+```
+
+### 10.4 连接流程
+
+```
+1. 前端登录 → 获取 JWT token
+2. 前端调用 POST /user/online → 后端标记在线
+3. 前端建立 STOMP 连接（携带 token 认证）
+4. 根据角色订阅对应频道
+5. 收到推送 → 弹通知 + 铃铛列表更新
+6. 页面关闭 → 调用 POST /user/offline
+```
+
+### 10.5 在线状态说明
+
+| 机制 | 说明 |
+|------|------|
+| Redis 标记 | `POST /user/online` 写入 `user_online:{userId}`，24h TTL |
+| 自动清除 | WebSocket 断开时自动删除 Redis 标记 |
+| 兜底策略 | 即使未调 `offline`，24h 后 TTL 到期自动清除 |
+| 判断依据 | 后端推送前检查 `isUserOnline(coachId)`，在线才推送 |

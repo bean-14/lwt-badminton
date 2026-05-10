@@ -1,9 +1,9 @@
 package edu.scau.mis.lwt.common.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -134,8 +134,9 @@ public class RabbitMQConfig {
      * 会自动把对象转成 JSON 字符串发送。
      */
     @Bean
-    public RabbitTemplate rabbitTemplate(@Autowired RabbitTemplate rabbitTemplate) {
-        rabbitTemplate.setMessageConverter(messageConverter());
-        return rabbitTemplate;
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(messageConverter());
+        return template;
     }
 }

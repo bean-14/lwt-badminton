@@ -8,6 +8,7 @@ import type { FormInstance } from "element-plus";
 import { useLayout } from "@/layout/hooks/useLayout";
 import { useUserStoreHook } from "@/store/modules/user";
 import { initRouter } from "@/router/utils";
+import { setOnlineApi } from "@/api/user";
 import { bg, avatar, illustration } from "./utils/static";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { ref, reactive, toRaw, onMounted, onBeforeUnmount } from "vue";
@@ -63,6 +64,7 @@ const onLogin = async (formEl: FormInstance | undefined) => {
       await initRouter();
       router.push(getHomePath(result.userType));
       message("登录成功", { type: "success" });
+      setOnlineApi().catch(() => {});
     } catch (err: any) {
       message(err?.message || "登录失败", { type: "error" });
     } finally {

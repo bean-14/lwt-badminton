@@ -8,6 +8,7 @@ type Events = {
   tagViewsShowModel: string;
   logoChange: boolean;
   changLayoutRoute: string;
+  websocketMessage: { title: string; description: string; type: string };
 };
 
 export const emitter: Emitter<Events> = mitt<Events>();

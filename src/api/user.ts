@@ -38,3 +38,13 @@ export const registerApi = (data: {
 export const getUserInfoApi = () => {
   return http.request<UserInfo>("get", "/auth/info");
 };
+
+/** 标记用户在线 */
+export const setOnlineApi = () => {
+  return http.request<null>("post", "/user/online");
+};
+
+/** 标记用户离线 */
+export const setOfflineApi = () => {
+  return http.request<null>("post", "/user/offline");
+};

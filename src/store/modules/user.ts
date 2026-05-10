@@ -7,7 +7,7 @@ import {
   storageLocal
 } from "../utils";
 import { useMultiTagsStoreHook } from "./multiTags";
-import { loginApi, getUserInfoApi } from "@/api/user";
+import { loginApi, getUserInfoApi, setOfflineApi } from "@/api/user";
 import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
 
 export const useUserStore = defineStore({
@@ -64,7 +64,8 @@ export const useUserStore = defineStore({
       return info;
     },
     /** 前端登出 */
-    logOut() {
+    async logOut() {
+      await setOfflineApi().catch(() => {});
       this.userId = 0;
       this.username = "";
       this.nickname = "";

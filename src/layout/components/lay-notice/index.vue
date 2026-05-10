@@ -1,19 +1,53 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import dayjs from "dayjs";
 import { noticesData } from "./data";
+import { emitter } from "@/utils/mitt";
 import NoticeList from "./components/NoticeList.vue";
 import BellIcon from "@iconify-icons/ep/bell";
 
-const noticesNum = ref(0);
 const notices = ref(noticesData);
 const activeKey = ref(noticesData[0]?.key);
 
-notices.value.map(v => (noticesNum.value += v.list.length));
+const noticesNum = computed(() => {
+  return notices.value.reduce((sum, tab) => sum + tab.list.length, 0);
+});
 
 const getLabel = computed(
   () => item =>
     item.name + (item.list.length > 0 ? `(${item.list.length})` : "")
 );
+
+onMounted(() => {
+  emitter.on("websocketMessage", onWebSocketMessage);
+});
+
+onBeforeUnmount(() => {
+  emitter.off("websocketMessage", onWebSocketMessage);
+});
+
+function onWebSocketMessage(msg: {
+  title: string;
+  description: string;
+  type: string;
+}) {
+  const noticeTab = notices.value.find(t => t.key === "1");
+  if (!noticeTab) return;
+  noticeTab.list.unshift({
+    avatar: "",
+    title: msg.title,
+    description: msg.description,
+    datetime: dayjs().format("HH:mm:ss"),
+    type: msg.type,
+    status: msg.type as any
+  });
+  // 最多保留 50 条
+  if (noticeTab.list.length > 50) {
+    noticeTab.list.length = 50;
+  }
+  // 切换到通知 tab
+  activeKey.value = "1";
+}
 </script>
 
 <template>

@@ -7,6 +7,11 @@ import { useLayout } from "./hooks/useLayout";
 import { useAppStoreHook } from "@/store/modules/app";
 import { useSettingStoreHook } from "@/store/modules/settings";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
+import { setOnlineApi, setOfflineApi } from "@/api/user";
+import { ElNotification } from "element-plus";
+import { emitter } from "@/utils/mitt";
+import { subscribe, disconnect, type StompMessage } from "@/utils/websocket";
+import { useUserStoreHook } from "@/store/modules/user";
 import {
   h,
   ref,
@@ -14,6 +19,7 @@ import {
   computed,
   onMounted,
   onBeforeMount,
+  onBeforeUnmount,
   defineComponent
 } from "vue";
 import {
@@ -114,10 +120,67 @@ useResizeObserver(appWrapperRef, entries => {
   }
 });
 
+let wsSubscription: any = null;
+
 onMounted(() => {
   if (isMobile) {
     toggle("mobile", false);
   }
+  // 页面加载/刷新时标记在线
+  setOnlineApi().catch(() => {});
+  // 页面关闭时标记离线
+  window.addEventListener("beforeunload", handleBeforeUnload);
+
+  // 根据用户角色订阅 WebSocket 通知
+  const { userId, userType } = useUserStoreHook();
+  if (!userId) return;
+  const topic =
+    userType === "coach"
+      ? `/topic/coach/${userId}`
+      : userType === "student"
+        ? `/topic/student/${userId}`
+        : null;
+  if (!topic) return;
+
+  subscribe(topic, (msg: StompMessage) => {
+    if (msg.type === "BOOKING_NEW") {
+      ElNotification({
+        title: "新预约通知",
+        message: `学生 ${msg.studentName} 预约了课程`,
+        type: "success",
+        duration: 5000
+      });
+      emitter.emit("websocketMessage", {
+        title: "新预约",
+        description: `学生 ${msg.studentName} 预约了课程`,
+        type: "success"
+      });
+    } else if (msg.type === "BOOKING_CONFIRMED") {
+      ElNotification({
+        title: "预约已确认",
+        message: `教练 ${msg.coachName} 已确认预约`,
+        type: "success",
+        duration: 5000
+      });
+      emitter.emit("websocketMessage", {
+        title: "预约已确认",
+        description: `教练 ${msg.coachName} 已确认预约`,
+        type: "success"
+      });
+    }
+  }).then(sub => {
+    wsSubscription = sub;
+  });
+});
+
+function handleBeforeUnload() {
+  setOfflineApi().catch(() => {});
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+  wsSubscription?.unsubscribe();
+  disconnect();
 });
 
 onBeforeMount(() => {
